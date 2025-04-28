@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> المجال الكهربائي المنتظم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .plate {
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        .positive-plate {
+            background: linear-gradient(to bottom, #ff4d4d, #ff1a1a);
+        }
+        .negative-plate {
+            background: linear-gradient(to bottom, #4d79ff, #1a53ff);
+        }
+        .field-line {
+            stroke-dasharray: 5, 5;
+            animation: dash 30s linear infinite;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+        .charge {
+            transition: transform 0.3s ease, top 0.5s ease;
+            position: absolute;
+            z-index: 10;
+        }
+        .positive-charge {
+            background: radial-gradient(circle, #ff8080, #ff4d4d, #ff0000);
+            box-shadow: 0 0 15px #ff0000;
+        }
+        .negative-charge {
+            background: radial-gradient(circle, #809fff, #4d79ff, #0040ff);
+            box-shadow: 0 0 15px #0040ff;
+        }
+        .draggable {
+            cursor: grab;
+        }
+        .draggable:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="p-6 bg-gradient-to-r from-blue-600 to-red-600">
+            <h1 class="text-3xl font-bold text-white text-center"> المجال الكهربائي المنتظم</h1>
+            <p class="text-white text-center mt-2">بين لوحين متوازيين (موجب وسالب)</p>
+        </div>
+        
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center">
+                    <div class="w-6 h-6 rounded-full positive-charge mr-2"></div>
+                    <span class="font-medium">اللوح الموجب</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-6 h-6 rounded-full negative-charge mr-2"></div>
+                    <span class="font-medium">اللوح السالب</span>
+                </div>
+            </div>
+            
+            <div class="relative h-96 w-full bg-gray-50 rounded-lg border border-gray-200 overflow-hidden" id="fieldContainer">
+                <!-- اللوح الموجب -->
+                <div class="plate positive-plate absolute top-4 left-1/2 transform -translate-x-1/2 w-4/5 h-8 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">+ + + + + + +</span>
+                </div>
+                
+                <!-- اللوح السالب -->
+                <div class="plate negative-plate absolute bottom-4 left-1/2 transform -translate-x-1/2 w-4/5 h-8 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">- - - - - - -</span>
+                </div>
+                
+                <!-- خطوط المجال الكهربائي -->
+                <svg class="absolute inset-0 w-full h-full" id="fieldLines">
+                    <!-- سيتم رسم الخطوط بواسطة الجافاسكريبت -->
+                </svg>
+                
+                <!-- الشحنات الاختبارية ستضاف هنا ديناميكيًا -->
+            </div>
+            
+            <!-- أزرار التحكم أسفل المحاكاة مباشرة -->
+            <div class="mt-4 flex flex-wrap justify-center gap-2">
+                <button onclick="addCharge('positive')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center">
+                    <span class="ml-2">+</span> إضافة شحنة موجبة
+                </button>
+                <button onclick="addCharge('negative')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center">
+                    <span class="ml-2">-</span> إضافة شحنة سالبة
+                </button>
+                <button onclick="increaseFieldStrength()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    زيادة شدة المجال
+                </button>
+                <button onclick="decreaseFieldStrength()" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    تقليل شدة المجال
+                </button>
+                <button onclick="resetSimulation()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                    </svg>
+                    إعادة الضبط
+                </button>
+            </div>
+            
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h3 class="font-bold text-blue-800 mb-2">خصائص المجال الكهربائي المنتظم:</h3>
+                    <ul class="list-disc pr-5 text-blue-700 space-y-1">
+                        <li>خطوط المجال متوازية وعلى ابعاد متساوية </li>
+                        <li>لا تخضع لقانون التربيع العكسي </li>
+                        <li>تتحرك خطوط المجال من الموجب الى السالب</li>
+                        <li>********</li>
+                    </ul>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <h3 class="font-bold text-red-800 mb-2">القوة على الشحنات بين اللوحين :</h3>
+                    <ul class="list-disc pr-5 text-red-700 space-y-1">
+                        <li>تتحرك الشحنة تحت تأثير قوتين (الجذب والتنافر)'(الجذب العام)'</li>
+                        <li>الشحنة الموجبة: القوة في اتجاه المجال (نحو اللوح السالب)</li>
+                        <li>الشحنة السالبة: القوة عكس اتجاه المجال (نحو اللوح الموجب)</li>
+                        <li>مقدار القوة: F = qE (q = الشحنة، E = شدة المجال)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // الإعدادات
+        let fieldStrength = 1;
+        const maxFieldStrength = 3;
+        const minFieldStrength = 0.5;
+        const lineSpacing = 40;
+        let chargeId = 0;
+        
+        // تهيئة المحاكاة
+        document.addEventListener('DOMContentLoaded', function() {
+            drawFieldLines();
+            // إضافة شحنات أولية
+            addCharge('positive');
+            addCharge('negative');
+        });
+        
+        // رسم خطوط المجال الكهربائي
+        function drawFieldLines() {
+            const svg = document.getElementById('fieldLines');
+            svg.innerHTML = '';
+            
+            const width = svg.clientWidth;
+            const height = svg.clientHeight;
+            const plateWidth = width * 0.8;
+            const startX = (width - plateWidth) / 2;
+            const endX = startX + plateWidth;
+            
+            // ضبط التباعد بناءً على شدة المجال
+            const adjustedSpacing = lineSpacing / fieldStrength;
+            const lineCount = Math.floor(plateWidth / adjustedSpacing);
+            
+            // رسم خطوط المجال
+            for (let i = 0; i <= lineCount; i++) {
+                const x = startX + (i * adjustedSpacing);
+                
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", x);
+                line.setAttribute("y1", 50); // البدء أسفل اللوح الموجب
+                line.setAttribute("x2", x);
+                line.setAttribute("y2", height - 50); // الانتهاء فوق اللوح السالب
+                line.setAttribute("stroke", fieldStrength > 1.5 ? "#ff3333" : "#33a1ff");
+                line.setAttribute("stroke-width", fieldStrength);
+                line.setAttribute("stroke-dasharray", "10,5");
+                line.setAttribute("class", "field-line");
+                
+                // إضافة رأس السهم في النهاية
+                const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+                marker.setAttribute("id", `arrowhead-${i}`);
+                marker.setAttribute("markerWidth", "10");
+                marker.setAttribute("markerHeight", "7");
+                marker.setAttribute("refX", "0");
+                marker.setAttribute("refY", "3.5");
+                marker.setAttribute("orient", "auto");
+                
+                const arrow = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                arrow.setAttribute("points", "0 0, 10 3.5, 0 7");
+                arrow.setAttribute("fill", fieldStrength > 1.5 ? "#ff3333" : "#33a1ff");
+                
+                marker.appendChild(arrow);
+                svg.appendChild(marker);
+                
+                line.setAttribute("marker-end", `url(#arrowhead-${i})`);
+                svg.appendChild(line);
+            }
+        }
+        
+        // إضافة شحنة جديدة للمحاكاة
+        function addCharge(type) {
+            const container = document.getElementById('fieldContainer');
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            // إنشاء حاوية الشحنة
+            const chargeContainer = document.createElement('div');
+            chargeContainer.className = 'absolute';
+            chargeContainer.id = `charge-${chargeId}`;
+            
+            // موقع أفقي عشوائي (تجنب الحواف)
+            const left = Math.random() * 0.6 * containerWidth + 0.2 * containerWidth;
+            chargeContainer.style.left = `${left}px`;
+            
+            // البدء في المنتصف عموديًا
+            chargeContainer.style.top = `${containerHeight / 2}px`;
+            
+            // إنشاء عنصر الشحنة
+            const charge = document.createElement('div');
+            charge.className = `charge draggable ${type}-charge w-8 h-8 rounded-full flex items-center justify-center text-white font-bold`;
+            charge.textContent = type === 'positive' ? '+' : '-';
+            charge.dataset.type = type;
+            charge.dataset.id = chargeId;
+            
+            // جعل الشحنة قابلة للسحب
+            makeDraggable(chargeContainer, charge);
+            
+            chargeContainer.appendChild(charge);
+            container.appendChild(chargeContainer);
+            
+            // بدء الحركة التلقائية بناءً على نوع الشحنة
+            startChargeMovement(chargeContainer, type);
+            
+            chargeId++;
+        }
+        
+        // جعل الشحنة قابلة للسحب
+        function makeDraggable(container, charge) {
+            let isDragging = false;
+            let offsetX, offsetY;
+            
+            charge.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                
+                // حساب الإزاحة
+                const rect = container.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                
+                // جلبها للأمام
+                container.style.zIndex = '100';
+                
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const containerParent = container.parentElement;
+                const parentRect = containerParent.getBoundingClientRect();
+                
+                // حساب الموقع الجديد
+                let newLeft = e.clientX - parentRect.left - offsetX;
+                let newTop = e.clientY - parentRect.top - offsetY;
+                
+                // تقييد الحركة داخل الحاوية
+                newLeft = Math.max(0, Math.min(parentRect.width - container.clientWidth, newLeft));
+                newTop = Math.max(0, Math.min(parentRect.height - container.clientHeight, newTop));
+                
+                container.style.left = `${newLeft}px`;
+                container.style.top = `${newTop}px`;
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                container.style.zIndex = '10';
+            });
+        }
+        
+        // بدء الحركة التلقائية للشحنة
+        function startChargeMovement(container, type) {
+            const charge = container.firstChild;
+            const containerParent = container.parentElement;
+            const parentHeight = containerParent.clientHeight;
+            
+            // حساب اتجاه القوة بناءً على نوع الشحنة
+            const direction = type === 'positive' ? 1 : -1;
+            
+            // دالة الحركة
+            const move = () => {
+                if (container.dataset.paused === 'true') return;
+                
+                const currentTop = parseFloat(container.style.top);
+                const chargeHeight = container.clientHeight;
+                
+                // حساب الموقع الجديد بناءً على شدة المجال ونوع الشحنة
+                let newTop = currentTop + (2 * direction * fieldStrength);
+                
+                // تحديد الحركة داخل الحاوية
+                newTop = Math.max(0, Math.min(parentHeight - chargeHeight, newTop));
+                
+                container.style.top = `${newTop}px`;
+                
+                // تأثير الارتداد عند الاصطدام بالألواح
+                if (newTop <= 50 || newTop >= parentHeight - 50 - chargeHeight) {
+                    charge.style.transform = 'scale(1.3)';
+                    setTimeout(() => {
+                        charge.style.transform = 'scale(1)';
+                    }, 300);
+                }
+                
+                // متابعة الحركة
+                requestAnimationFrame(move);
+            };
+            
+            // التوقف عند التحويم
+            container.addEventListener('mouseenter', () => {
+                container.dataset.paused = 'true';
+                charge.style.transform = 'scale(1.2)';
+            });
+            
+            // الاستئناف عند مغادرة المؤشر
+            container.addEventListener('mouseleave', () => {
+                container.dataset.paused = 'false';
+                charge.style.transform = 'scale(1)';
+                requestAnimationFrame(move);
+            });
+            
+            // بدء الحركة
+            move();
+        }
+        
+        // ضبط شدة المجال
+        function increaseFieldStrength() {
+            if (fieldStrength < maxFieldStrength) {
+                fieldStrength += 0.5;
+                updateField();
+            }
+        }
+        
+        function decreaseFieldStrength() {
+            if (fieldStrength > minFieldStrength) {
+                fieldStrength -= 0.5;
+                updateField();
+            }
+        }
+        
+        function updateField() {
+            drawFieldLines();
+            
+            // تحديث مظهر الألواح بناءً على شدة المجال
+            const positivePlate = document.querySelector('.positive-plate');
+            const negativePlate = document.querySelector('.negative-plate');
+            
+            positivePlate.style.boxShadow = `0 0 ${10 * fieldStrength}px rgba(255, 0, 0, ${0.2 * fieldStrength})`;
+            negativePlate.style.boxShadow = `0 0 ${10 * fieldStrength}px rgba(0, 64, 255, ${0.2 * fieldStrength})`;
+        }
+        
+        function resetSimulation() {
+            fieldStrength = 1;
+            
+            // إزالة جميع الشحنات ما عدا الشحنتين الأوليتين
+            const container = document.getElementById('fieldContainer');
+            const charges = container.querySelectorAll('[id^="charge-"]');
+            
+            charges.forEach((charge, index) => {
+                if (index >= 2) {
+                    container.removeChild(charge);
+                } else {
+                    // إعادة ضبط موقع الشحنات المتبقية
+                    const containerHeight = container.clientHeight;
+                    charge.style.left = `${index === 0 ? '25%' : '75%'} of container width`;
+                    charge.style.top = `${containerHeight / 2}px`;
+                }
+            });
+            
+            // إعادة ضبط عداد الشحنات
+            chargeId = 2;
+            
+            // إعادة ضبط المجال
+            updateField();
+        }
+    </script>
+</html>
